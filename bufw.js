@@ -4,6 +4,8 @@ var bin = require('./bin')
 var Buffer = require('buffer').Buffer
 var seedrandom = require('seedrandom')
 
+var WarningSize = 1024*1024
+
 function makeBuffer(len){
 	//if(typeof Buffer !== 'undefined'){
 		return new Buffer(len)
@@ -26,6 +28,7 @@ function W(bufferSize, ws){
 	//console.log(new Error().stack)
 
 	this.b = makeBuffer(bufferSize)
+	//console.log('making buffer: ' + bufferSize)
 	
 	this.bytesSinceFlush = 0;
 	
@@ -60,6 +63,10 @@ W.prototype.writeBuffer = function(nextSize, cb){
 	nextSize = Math.min(this.bufferSize, Math.max(nextSize, this.bytesSinceFlush))+1024;
 	//console.log('(' + this.position + ')nextSize: ' + this.bufferSize + ' ' + nextSize + ' ' + this.bytesSinceFlush)
 	//console.log(new Error().stack)
+	
+	if(nextSize > WarningSize){
+		console.log('WARNING: bufw created buf larger than '+(WarningSize/(1024*1024)).toFixed(4)+'MB: ' + (nextSize/(1024*1024)).toFixed(4)+'MB')
+	}
 
 	var local = this;
 	var bb = this.b;
@@ -90,7 +97,13 @@ W.prototype.prepareFor = function(manyBytes){
 			//console.log(new Error().stack)
 			//console.log('expanding delayed: ' + this.position)
 			this.needWrite = true;
-			var nb = makeBuffer((manyBytes+this.b.length)*2)
+			var newSize = (manyBytes+this.b.length)*2
+	
+			if(newSize > WarningSize){
+				console.log('WARNING: bufw created buf larger than '+(WarningSize/(1024*1024)).toFixed(4)+'MB: ' + (newSize/(1024*1024)).toFixed(4)+'MB')
+			}
+
+			var nb = makeBuffer(newSize)
 			this.b.copy(nb, 0, 0);
 			this.b = nb;
 		}else{
